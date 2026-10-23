@@ -4,34 +4,42 @@ import (
 	"bonno/app/models"
 	"bonno/app/routes"
 	"github.com/revel/revel"
-	"io/ioutil"
 	"math/rand"
-	"time"
+	"os"
+	"path/filepath"
 )
 
 type App struct {
 	*revel.Controller
 }
 
-//インデックス画面を表示する
+// 動画ディレクトリの絶対パスを返す（相対パスはアプリのベースパス基準）
+func movieBaseDir() string {
+	abdir := revel.Config.StringDefault("bonno.abdir", "public/douga")
+	if filepath.IsAbs(abdir) {
+		return abdir
+	}
+	return filepath.Join(revel.BasePath, abdir)
+}
+
+// インデックス画面を表示する
 func (c App) Index() revel.Result {
 	movielist, _ := DbMap.Select(models.Movie{}, "select * from Movie order by RANDOM() limit 1")
 	catelist, _ := DbMap.Select(models.Movie{}, "select distinct Tag1 from Movie")
 	return c.Render(movielist, catelist)
 }
 
-//かっちょいいトップ画面を表示する
+// かっちょいいトップ画面を表示する
 func (c App) Top() revel.Result {
-	abdir := revel.Config.StringDefault("bonno.abdir", "./")
+	abdir := movieBaseDir()
 	reldir := revel.Config.StringDefault("bonno.reldir", "./")
-	topmoviedatas, _ := ioutil.ReadDir(abdir + "/other/top")
-	rand.Seed(time.Now().UnixNano())
+	topmoviedatas, _ := os.ReadDir(abdir + "/other/top")
 	i := len(topmoviedatas)
 	topmoviepath := reldir + "/other/top/" + topmoviedatas[rand.Intn(i)].Name()
 	return c.Render(topmoviepath)
 }
 
-//動画一覧を表示する
+// 動画一覧を表示する
 func (c App) Movie() revel.Result {
 	movielist, _ := DbMap.Select(models.Movie{}, "select * from Movie order by RANDOM() limit 10")
 	catelist, _ := DbMap.Select(models.Movie{}, "select distinct Tag1 from Movie")
@@ -50,27 +58,31 @@ func (c App) Category(tag string) revel.Result {
 	return c.Render(tag, movielist, catelist)
 }
 
-//動画詳細を表示する
+// 動画詳細を表示する
 func (c App) Detail(id int) revel.Result {
 	rows, _ := DbMap.Select(models.Movie{}, "select * from Movie where Id=?", id)
 	movie := rows[0].(*models.Movie)
-	abdir := revel.Config.StringDefault("bonno.abdir", "./")
-	moviedata, _ := ioutil.ReadDir(abdir + "/movie/" + movie.Tag1 + "/" + movie.Name)
+	abdir := movieBaseDir()
+	moviedata, _ := os.ReadDir(abdir + "/movie/" + movie.Tag1 + "/" + movie.Name)
 	catelist, _ := DbMap.Select(models.Movie{}, "select distinct Tag1 from Movie")
 	return c.Render(movie, moviedata, catelist)
 }
 
-//動画のディレクトリを読み込んでDBに追加する
+// 動画のディレクトリを読み込んでDBに追加する
 func (c App) Init() revel.Result {
-	abdir := revel.Config.StringDefault("bonno.abdir", "./")
+	abdir := movieBaseDir()
 	reldir := revel.Config.StringDefault("bonno.reldir", "./")
-	dirlist, _ := ioutil.ReadDir(abdir + "/movie")
+	dirlist, _ := os.ReadDir(abdir + "/movie")
 	for _, dir := range dirlist {
-		titlelist, _ := ioutil.ReadDir(abdir + "/movie/" + dir.Name())
+		titlelist, _ := os.ReadDir(abdir + "/movie/" + dir.Name())
 		for _, title := range titlelist {
+			info, err := title.Info()
+			if err != nil {
+				continue
+			}
 			rows, _ := DbMap.Select(models.Movie{}, "select * from Movie where Name=?", title.Name())
 			if len(rows) == 0 {
-				DbMap.Insert(&models.Movie{0, title.Name(), reldir + "/movie/" + dir.Name() + "/" + title.Name(), reldir + "/images/thumb/" + title.Name() + ".png", 0, "", title.ModTime(), dir.Name(), "", "", ""})
+				DbMap.Insert(&models.Movie{0, title.Name(), reldir + "/movie/" + dir.Name() + "/" + title.Name(), reldir + "/images/thumb/" + title.Name() + ".png", 0, "", info.ModTime(), dir.Name(), "", "", ""})
 			}
 		}
 	}

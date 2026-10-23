@@ -10,4 +10,4 @@ GET     /douga/:tag                     App.Category
 GET     /douga/detail/:id               App.Detail
 GET     /init                           App.Init
 
-GET     /public/*filepath                       Static.Serve('public')
+GET     /public/*filepath                       Static.Serve("public")
