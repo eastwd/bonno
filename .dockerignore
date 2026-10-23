@@ -3,3 +3,7 @@ docker-compose.yml
 .git
 .travis.yml
 .gitignore
+target
+app/tmp
+app/routes
+conf/app.db

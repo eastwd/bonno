@@ -4,9 +4,9 @@ package controllers
 import (
 	"bonno/app/models"
 	"database/sql"
+	"github.com/go-gorp/gorp/v3"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/revel/revel"
-	"gopkg.in/gorp.v1"
 )
 
 // DbMapという変数にgorpのポインタを持たせる
