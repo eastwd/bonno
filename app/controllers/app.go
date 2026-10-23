@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type App struct {
@@ -33,9 +34,19 @@ func (c App) Index() revel.Result {
 func (c App) Top() revel.Result {
 	abdir := movieBaseDir()
 	reldir := revel.Config.StringDefault("bonno.reldir", "./")
-	topmoviedatas, _ := os.ReadDir(abdir + "/other/top")
-	i := len(topmoviedatas)
-	topmoviepath := reldir + "/other/top/" + topmoviedatas[rand.Intn(i)].Name()
+	entries, _ := os.ReadDir(abdir + "/other/top")
+	var topmovies []string
+	for _, e := range entries {
+		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		topmovies = append(topmovies, e.Name())
+	}
+	// 動画が無い場合は topmoviepath を空にし、テンプレート側で代替表示する
+	topmoviepath := ""
+	if len(topmovies) > 0 {
+		topmoviepath = reldir + "/other/top/" + topmovies[rand.Intn(len(topmovies))]
+	}
 	return c.Render(topmoviepath)
 }
 
